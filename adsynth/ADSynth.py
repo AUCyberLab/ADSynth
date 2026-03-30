@@ -61,7 +61,17 @@ from adsynth.synthesizer.nhi import create_non_humans
 from adsynth.hybrid_system.invariant_validators import (
     validate_graph_invariants, print_validation_report
 )
- 
+from adsynth.synthesizer.hybrid_seam import create_sync_links, create_user_synced_to_edges
+from adsynth.synthesizer.nhi import create_non_humans
+from adsynth.hybrid_system.invariant_validators import validate_graph_invariants, print_validation_report
+from adsynth.synthesizer.hybrid_seam import (
+    create_sync_links, create_user_synced_to_edges
+)
+from adsynth.synthesizer.nhi import create_non_humans
+from adsynth.hybrid_system.invariant_validators import (
+    validate_graph_invariants, print_validation_report
+)
+
 
 SYNC_RELATIONSHIPS = {}  # Maps AD object IDs to Azure object IDs
 HYBRID_OBJECTS = {}      # Tracks objects that exist in both environments
@@ -1209,7 +1219,8 @@ class MainMenu(cmd.Cmd):
 	
 		reset_DB()
 		self.generate_data()   # Phase 1: full on-prem AD for domain 0
-	
+		seed_val = self.parameters.get("seed", 1)
+
 		# --------------------------------------------------------
 		# Build domain list from what generate_data() created
 		# --------------------------------------------------------
@@ -1239,7 +1250,7 @@ class MainMenu(cmd.Cmd):
 		# --------------------------------------------------------
 		from adsynth.azure_ad_system.az_default_tenants import az_create_tenant
 		from adsynth.utils.parameters import get_int_param_value
-		seed_val = self.parameters.get("seed", 1)
+	
 		hybrid_cfg = self.parameters.get("hybrid", {})
 		n_tenants = hybrid_cfg.get("nTenants", 3)  # paper default T=3
 		posture_dist = hybrid_cfg.get("postureDistribution", {
@@ -1263,27 +1274,24 @@ class MainMenu(cmd.Cmd):
 				k=1
 			)[0]
 	
-			# Store metadata before creating tenant node
-			# (az_create_tenant reads TENANT_METADATA for plane/orgType/posture)
-			tenant_id_preview = str(uuid.uuid5(
-				uuid.UUID(int=0), f"tenant:{t_name}"
-			)).upper()
-	
-			TENANT_METADATA[tenant_id_preview] = {
-				"orgType": org_type,
-				"posture": posture,
-			}
-	
 			tenant_id = az_create_tenant(t_name)
-			tenants.append({
-				"id":   tenant_id,
-				"name": t_name,
-			})
-	
+
 			TENANT_METADATA[tenant_id] = {
 				"orgType": org_type,
 				"posture": posture,
 			}
+
+			# Update the node properties now that we have the real tenant_id
+			t_idx = get_node_index(tenant_id, "objectid")
+			if t_idx != -1:
+				NODES[t_idx]["properties"]["orgType"] = org_type
+				NODES[t_idx]["properties"]["posture"] = posture
+
+			tenants.append({
+				"id":   tenant_id,
+				"name": t_name,
+			})
+
 	
 			print(f"  Tenant {i+1}: {t_name} [{org_type}] posture={posture}")
 	
@@ -1293,7 +1301,6 @@ class MainMenu(cmd.Cmd):
 		print("\nPhase 3: Creating hybrid seam infrastructure")
 		from adsynth.synthesizer.hybrid_seam import create_sync_links
 	
-		seed_val = self.parameters.get("seed", 1)
 		links = create_sync_links(domains, tenants, self.parameters, seed_val)
 	
 		print(f"  Sync links created: {len(links)}")
@@ -1335,7 +1342,11 @@ class MainMenu(cmd.Cmd):
 			+ len(nhi_result["cross_pool"])
 		)
 		print(f"  Total NHI nodes created: {total_nhi}")
+		print(f"  AI Agent nodes: {len(nhi_result['ai_agents'])}")
 		print(f"  Cross-tenant pool: {len(nhi_result['cross_pool'])}")
+		print(f"  ORCHESTRATES edges: {nhi_result['orchestrates_edges']}")
+		print(f"  DELEGATES_TO edges: {nhi_result['delegates_to_edges']}")
+		print(f"  HAS_TOOL_ACCESS edges: {nhi_result['tool_access_edges']}")
 	
 		# --------------------------------------------------------
 		# Phase 5: SYNCED_TO user mappings
@@ -1354,7 +1365,12 @@ class MainMenu(cmd.Cmd):
 			)
 			total_synced += n
 		print(f"  SYNCED_TO edges created: {total_synced}")
-	
+		# Now delegation edges can fire because AZUser nodes exist
+		from adsynth.synthesizer.nhi import create_delegation_edges
+		rng_deleg = random.Random(seed_val ^ 0xDE16)
+		deleg_edges = create_delegation_edges(nhi_result["sp_by_tenant"], rng_deleg)
+		print(f"  DELEGATES_TO edges created: {deleg_edges}")
+			
 		# --------------------------------------------------------
 		# Phase 6: Invariant validation
 		# --------------------------------------------------------
@@ -1382,7 +1398,12 @@ class MainMenu(cmd.Cmd):
 	
 		for label in NODE_GROUPS:
 			if NODE_GROUPS[label]:
-				print(f"  {label}: {len(NODE_GROUPS[label])}")
+				count = len(NODE_GROUPS[label])
+				# For AIAgent, annotate it is a subset of AZServicePrincipal
+				if label == "AIAgent":
+					print(f"  AIAgent (subset of AZServicePrincipal): {count}")
+				else:
+					print(f"  {label}: {count}")
 	
 		current_datetime = datetime.now()
 		filename = "hybrid_v2_" + current_datetime.strftime("%Y-%m-%d_%H-%M-%S-%f")[:-3]
@@ -1407,7 +1428,6 @@ class MainMenu(cmd.Cmd):
 		print(f"\nHybrid v2 generation complete in {end_ - start_:.2f}s")
 		print(f"Output: generated_datasets/{filename}.json")
 	
-
 	def edge_operation(self, source_idx, target_idx, edge_type, prop_names=None, prop_values=None):
 		"""Helper function to create edges with properties"""
 		if source_idx == -1 or target_idx == -1:

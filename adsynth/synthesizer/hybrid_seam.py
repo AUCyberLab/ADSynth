@@ -385,38 +385,64 @@ def create_user_synced_to_edges(
     For a given sync link, create SYNCED_TO(AD_user -> Entra_user) edges
     for syncPercentage% of enabled AD users in that domain.
 
-    Called after both AD users and Entra users have been generated.
+    Creates corresponding Entra user nodes on the fly for synced users
+    since az_create_users is not called in the hybrid v2 pipeline.
+
     Returns count of SYNCED_TO edges created.
     """
+    import uuid as _uuid
+
     sync_perc = config.get("hybrid", {}).get("syncPercentage", 80)
 
     # Find enabled AD users in this domain
+    # Note: do NOT filter by plane — not all users have it yet (Step 2 pending)
     ad_user_indices = [
         idx for idx in NODE_GROUPS["User"]
         if NODES[idx]["properties"].get("domain", "").upper() == domain_name.upper()
         and NODES[idx]["properties"].get("enabled", True)
-        and NODES[idx]["properties"].get("plane", "AD") == "AD"
     ]
 
     if not ad_user_indices:
         return 0
 
-    # Find Entra users in this tenant
-    entra_user_indices = [
-        idx for idx in NODE_GROUPS["AZUser"]
-        if NODES[idx]["properties"].get("tenantid", "") == tenant_id
-    ]
-
-    if not entra_user_indices:
-        return 0
-
     n_to_sync = max(1, int(len(ad_user_indices) * sync_perc / 100))
     to_sync = rng.sample(ad_user_indices, min(n_to_sync, len(ad_user_indices)))
 
+    # Get tenant name for UPN generation
+    tenant_node = None
+    for n in NODES:
+        if n["properties"].get("objectid") == tenant_id:
+            tenant_node = n
+            break
+    tenant_name = tenant_node["properties"].get("name", "tenant.onmicrosoft.com") if tenant_node else "tenant.onmicrosoft.com"
+
     edges_created = 0
     for ad_idx in to_sync:
-        # Pair with a random Entra user in this tenant
-        entra_idx = rng.choice(entra_user_indices)
+        ad_props = NODES[ad_idx]["properties"]
+        ad_name = ad_props.get("name", "")
+        display_name = ad_props.get("displayname", ad_name.split("@")[0])
+
+        # Build Entra UPN from AD name
+        local_part = ad_name.split("@")[0].lower()
+        entra_upn = f"{local_part}@{tenant_name}".lower()
+        entra_objectid = str(_uuid.uuid4()).upper()
+
+        # Create corresponding Entra user node
+        entra_keys = [
+            "labels", "name", "objectid", "plane", "runId",
+            "tenantId", "tenantid",
+            "displayName", "enabled",
+            "syncedFromOnPremises",
+        ]
+        entra_values = [
+            "AZUser", entra_upn, entra_objectid, "Entra", RUN_ID,
+            tenant_id, tenant_id,
+            display_name, True,
+            True,
+        ]
+        entra_idx = node_operation("AZUser", entra_keys, entra_values, entra_objectid)
+
+        # SYNCED_TO: AD user -> Entra user
         edge_operation(ad_idx, entra_idx, "SYNCED_TO", ["isacl"], [False])
         edges_created += 1
 

@@ -164,6 +164,12 @@ NODE_GROUPS = {
     # --- NEW: Typed NonHumanIdentity subtypes (Week 3 merge) ---
     "ManagedIdentity": list(),    # Azure managed identity
     "AutomationAccount": list(),  # On-prem automation account
+
+    # --- NEW: AI Agent tracking (Week 4 extension) ---
+    # AI agents are ServicePrincipals with isAIAgent=True
+    # Node label in graph stays AZServicePrincipal
+    # AIAgent here is a logical tracking group for metrics/invariants
+    "AIAgent": list(),
 }
 
 # ============================================================
@@ -218,6 +224,10 @@ DOMAIN_TENANT_MAPPING = {}
 # List of all NonHumanIdentity node indices (SyncIdentity, SP, MI, AA)
 NHI_NODE_INDICES = []
 
+# List of AI Agent node indices (subset of NHI_NODE_INDICES)
+# These are ServicePrincipals with isAIAgent=True
+AI_AGENT_NODE_INDICES = []
+
 # Maps tenant_id -> {"posture": str, "orgType": str}
 TENANT_METADATA = {}
 
@@ -263,6 +273,7 @@ def reset_DB():
     TENANT_HYBRID_MODE.clear()
     DOMAIN_TENANT_MAPPING.clear()
     NHI_NODE_INDICES.clear()
+    AI_AGENT_NODE_INDICES.clear()
     TENANT_METADATA.clear()
 
     global RUN_ID

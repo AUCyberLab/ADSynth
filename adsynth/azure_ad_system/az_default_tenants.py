@@ -1,30 +1,28 @@
 import uuid
-from adsynth.DATABASE import NODES, NODE_GROUPS
-from adsynth.DATABASE import RUN_ID, TENANT_METADATA
+from adsynth.DATABASE import node_operation, NODE_GROUPS, TENANT_METADATA, RUN_ID
+
+
 def az_create_tenant(tenant_name):
-    
-    # Create a tenant
-    tenant_id = str(uuid.uuid4()).upper() # Note: Azure uses object IDs formatted like UUID
+
+    tenant_id = str(uuid.uuid4()).upper()
+
+    # Pull metadata if pre-populated by do_generate_hybrid_v2
     meta = TENANT_METADATA.get(tenant_id, {})
 
+    keys = [
+        "labels", "name", "objectid", "displayName",
+        "plane", "runId",
+        "orgType", "posture",
+    ]
+    values = [
+        "AZTenant", tenant_name, tenant_id, tenant_name,
+        "Entra", RUN_ID,
+        meta.get("orgType", "parent"),
+        meta.get("posture", "average"),
+    ]
 
-    NODES.append({
-        "id": tenant_id,
-        "name": tenant_name,
-        "type": "AZTenant",
-        "labels": ["AZTenant"],
-        "objectid": tenant_id,
-        "displayName": tenant_name,
-        "plane": "Entra",
-        "runId": RUN_ID,
-        "orgType": meta.get("orgType", "parent"),
-        "posture": meta.get("posture", "average"),
-    })
+    # node_operation writes to NODES and updates DATABASE_ID["objectid"]
+    # so get_node_index(tenant_id, "objectid") will work after this call
+    node_operation("AZTenant", keys, values, tenant_id)
 
-    NODE_GROUPS["AZTenant"] = NODE_GROUPS.get("AZTenant", [])
-    NODE_GROUPS["AZTenant"].append(tenant_id)
-
-
-
-
-    return (tenant_id)
+    return tenant_id
