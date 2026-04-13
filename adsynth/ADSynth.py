@@ -71,7 +71,10 @@ from adsynth.synthesizer.nhi import create_non_humans
 from adsynth.hybrid_system.invariant_validators import (
     validate_graph_invariants, print_validation_report
 )
-
+from adsynth.synthesizer.permissions_hybrid import run_hybrid_permissions_phase
+from adsynth.hybrid_system.seam_metrics import (
+	compute_seam_metrics, print_seam_metrics_report, export_metrics_json
+)
 
 SYNC_RELATIONSHIPS = {}  # Maps AD object IDs to Azure object IDs
 HYBRID_OBJECTS = {}      # Tracks objects that exist in both environments
@@ -1296,6 +1299,19 @@ class MainMenu(cmd.Cmd):
 			print(f"  Tenant {i+1}: {t_name} [{org_type}] posture={posture}")
 	
 		# --------------------------------------------------------
+		# Phase 2b: Create Azure roles per tenant
+		# (required for Phase 6 NHI role assignments)
+		# --------------------------------------------------------
+		print("\nPhase 2b: Creating Azure roles per tenant")
+		from adsynth.azure_ad_system.az_default_roles import az_create_roles
+
+		roles_per_tenant = {}
+		for t in tenants:
+			roles = az_create_roles(t["id"], self.parameters)
+			roles_per_tenant[t["id"]] = roles
+			print(f"  Roles created for {t['name']}: {len(roles)}")
+
+		# --------------------------------------------------------
 		# Phase 3: Sync links — SyncIdentity + bridge infrastructure
 		# --------------------------------------------------------
 		print("\nPhase 3: Creating hybrid seam infrastructure")
@@ -1371,9 +1387,31 @@ class MainMenu(cmd.Cmd):
 		deleg_edges = create_delegation_edges(nhi_result["sp_by_tenant"], rng_deleg)
 		print(f"  DELEGATES_TO edges created: {deleg_edges}")
 			
+		
 		# --------------------------------------------------------
-		# Phase 6: Invariant validation
+		# Phase 6: Permissions and misconfiguration injection
 		# --------------------------------------------------------
+
+		print("\nPhase 6: Permissions and misconfiguration injection")
+
+		perm_summary = run_hybrid_permissions_phase(
+			domains=domains,
+			tenants=tenants,
+			config=self.parameters,
+			seed=seed_val,
+		)
+		print(f"  Total NHI role edges:                {perm_summary['nhi_role_edges']}")
+		print(f"  SyncIdentity domain rights:          {perm_summary['sync_right_edges']}")
+		print(f"  AutomationAccount delegated rights:  {perm_summary['deleg_edges']}")
+		print(f"  AI Agent permission edges:           {perm_summary['ai_perm_edges']}")
+		print(f"  Misconfig edges injected:            {perm_summary['total_misconfig']}")
+		for mtype, count in perm_summary['misconfig_counts'].items():
+			print(f"    {mtype}: {count}")
+
+		# --------------------------------------------------------
+		# Phase 7: Invariant validation
+		# --------------------------------------------------------
+		
 		print("\nPhase 6: Validating semantic invariants")
 		from adsynth.hybrid_system.invariant_validators import (
 			validate_graph_invariants, print_validation_report
@@ -1382,7 +1420,7 @@ class MainMenu(cmd.Cmd):
 		print_validation_report(results)
 	
 		# --------------------------------------------------------
-		# Phase 7: Export
+		# Phase 8: Export
 		# --------------------------------------------------------
 		print("\nPhase 7: Exporting to JSON")
 	
@@ -1427,6 +1465,22 @@ class MainMenu(cmd.Cmd):
 		end_ = timer()
 		print(f"\nHybrid v2 generation complete in {end_ - start_:.2f}s")
 		print(f"Output: generated_datasets/{filename}.json")
+		print(f"  Permission edges (NHI roles): {perm_summary['nhi_role_edges']}")
+		print(f"  Misconfig edges:              {perm_summary['total_misconfig']}")
+  
+	    # --------------------------------------------------------
+		# Phase 8: Seam metrics (Week 8)
+		# --------------------------------------------------------
+		print("\\nPhase 8: Computing seam metrics")
+		from adsynth.hybrid_system.seam_metrics import (
+			compute_seam_metrics, print_seam_metrics_report, export_metrics_json
+		)
+ 
+		seam_metrics = compute_seam_metrics(domains, tenants)
+		print_seam_metrics_report(seam_metrics)
+	
+		metrics_path = export_metrics_json(seam_metrics)
+		print(f"  Metrics JSON: {metrics_path}")
 	
 	def edge_operation(self, source_idx, target_idx, edge_type, prop_names=None, prop_values=None):
 		"""Helper function to create edges with properties"""

@@ -22,6 +22,8 @@ from typing import Any, Dict, List, Optional
 
 DEFAULT_HYBRID_CONFIG: Dict[str, Any] = {
 
+    
+
     # Domain topology 
     "Domain": {
         "nDomains": 1,                        # Number of AD domains to generate
@@ -110,12 +112,58 @@ DEFAULT_HYBRID_CONFIG: Dict[str, Any] = {
         "percentageOrphanedNHI": 10,               # % of NHI with no clear owner (Unknown)
     },
 
+    
     # ── Output / reproducibility 
     "Output": {
         "format": "jsonl",     # only "jsonl" supported in Week 1
         "outputDir": "generated_datasets",
     },
+        "hybrid": {
+        "nTenants": 3,
+        "p_domain_multisync": 0.15,
+        "syncPercentage": 80,
+        "syncModeDistribution": {
+            "PHS": 60, "PTA": 20, "ADFS": 10, "Mixed": 10
+        },
+ 
+        # ── Week 6: Permissions and misconfig knobs ──────────────
+        "hybrid_misconfig": {
+            # Probability a standard-tier NHI gets any role at all
+            "standard_nhi_role_prob": 0.40,
+ 
+            # Max OUs an AutomationAccount can be delegated over
+            "max_ous_tier0":    3,
+            "max_ous_tier1":    5,
+            "max_ous_standard": 2,
+ 
+            # Misconfig injection rates (percentage of eligible NHIs)
+            # Orphaned NHI (ownerType=Unknown) -> elevated role
+            "orphaned_nhi_perc": 10,
+ 
+            # SyncIdentity -> ADMIN_TO on connector hosts it doesn't own
+            "overbroad_sync_perc": 8,
+ 
+            # NHI in one tenant gets role in another tenant
+            "cross_tenant_perc": 3,
+ 
+            # Stale credential NHI (rotation > 365 days) -> elevated role
+            "long_rotation_perc": 12,
+        },}
+    
+    
 }
+
+WEEK6_HYBRID_MISCONFIG_DEFAULTS = {
+    "standard_nhi_role_prob": 0.40,
+    "max_ous_tier0":    3,
+    "max_ous_tier1":    5,
+    "max_ous_standard": 2,
+    "orphaned_nhi_perc":    10,
+    "overbroad_sync_perc":   8,
+    "cross_tenant_perc":     3,
+    "long_rotation_perc":   12,
+}
+ 
 
 
 # Merge helpers
