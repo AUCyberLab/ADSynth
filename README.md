@@ -1,6 +1,6 @@
 # ADSynth: A Tool to Synthesize Realistic Active Directory Attack Graphs
 
-ADSynth generates synthetic Active Directory attack graphs based on set-to-set mapping, an intrinsic property of AD systems. It models the structure of AD graphs, security permissions, and common administration misconfigurations following design guidelines from Microsoft and other prestigious organizations, producing realistic graphs at security levels ranging from vulnerable to extremely secure.
+ADSynth generates synthetic Active Directory attack graphs based on set-to-set mapping, an intrinsic property of AD systems. It models the structure of AD graphs, security permissions, and common administration misconfigurations following design guidelines from Microsoft and other organizations, producing realistic graphs at security levels ranging from vulnerable to extremely secure.
 
 Recent work extends ADSynth from classic on-premises AD to **hybrid identity environments** — on-prem AD federated with Microsoft Entra ID (Azure AD) — together with non-human identities, AI agents, schema-validated invariants, and end-to-end reproducibility tooling.
 
