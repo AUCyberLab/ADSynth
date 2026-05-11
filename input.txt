@@ -1,6 +1,0 @@
-dbconfig
-
-setparams
-/Users/a1787526/Documents/MPHIL_RESEARCH/ADGenerator/ADGenerator-tiered-fix-input/adsynth/templates/input.json
-generate
-exit
