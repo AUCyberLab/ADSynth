@@ -25,7 +25,7 @@ python -m adsynth
 (From any other directory, run `PYTHONPATH=<YOUR-PATH>/ADSynth python -m adsynth`.)
 3. Run the following commands
 * ```adconfig``` - Specify the level of security. There are 2 levels: Low or High. If you want to use your configuration (**highly recommended**), leave it as Customized.
-* ```setparams``` - Set the parameters. Copy and paste the JSON file for your parameters. The template for it is in the file **params_template.json**. Details of parameters are in **params_list.xlsx** or on our <a href="https://adsynthesizer.github.io/">website</a>.
+* ```setparams``` - Set the parameters. Copy and paste the JSON file for your parameters. The template for it is in the file **params_template.json**. Details of parameters are in **params_list.xlsx** or on our <a href="https://aucyberlab.github.io/adsynthesizer/">website</a>.
 * ```generate``` - Generate the AD attack graph
 
     <b>[OPTIONAL]</b>
