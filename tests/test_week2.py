@@ -1,7 +1,7 @@
 """
 test_week2.py — Week 2 topology generation tests
 =================================================
-Run with:  python test_week2.py
+Run with:  python tests/test_week2.py   (from repo root)
 
 Tests:
   1.  Domain generator: correct node count, SID format, FQDN naming
@@ -27,7 +27,7 @@ import subprocess
 import sys
 import uuid
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from adsynth.hybrid_system.export_writer import (
     reset_graph, HYBRID_NODES, HYBRID_EDGES,
@@ -347,7 +347,7 @@ def test_cli():
     print("\n── CLI End-to-End ────────────────────────────────────────────")
     import tempfile
 
-    script = os.path.join(os.path.dirname(__file__), "run.py")
+    script = os.path.join(os.path.dirname(os.path.dirname(__file__)), "run.py")
 
     with tempfile.TemporaryDirectory() as tmpdir:
         result = subprocess.run(

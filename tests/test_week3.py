@@ -1,6 +1,6 @@
 """
 test_week3.py — Week 3 principal generation tests
-Run with:  python test_week3.py  (from hybrid_week3/ directory)
+Run with:  python tests/test_week3.py  (from repo root)
 
 Tests:
   1.  AD users: correct count per domain
@@ -40,7 +40,7 @@ import subprocess
 import sys
 import tempfile
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from adsynth.hybrid_system.export_writer import reset_graph, HYBRID_NODES, HYBRID_EDGES
 from adsynth.hybrid_system.schema_registry import NodeLabel, RelType, Plane, is_allowed_edge
@@ -362,7 +362,7 @@ def test_determinism():
 
 def test_cli():
     print("\n── CLI End-to-End ───────────────────────────────────────────")
-    script = os.path.join(os.path.dirname(__file__), "run.py")
+    script = os.path.join(os.path.dirname(os.path.dirname(__file__)), "run.py")
     with tempfile.TemporaryDirectory() as tmpdir:
         result = subprocess.run(
             [sys.executable, script, "--seed", "42",
