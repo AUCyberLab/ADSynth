@@ -23,8 +23,19 @@ def az_assign_roles(users, groups, service_principals, roles, tenant_id, subscri
     assign_chance_sps = get_perc_param_value("AZRole", "assignChanceServicePrincipals", params)
     overprivileged_users = get_perc_param_value("AZMisconfig", "overprivileged_users", params)
 
-    global_admin_role = next((r for r in roles if any(n.get("properties", {}).get("name") == "Global Administrator" and n.get("properties", {}).get("objectid") == r for n in NODES)), None)
-    global_admin_user = next((u for u in users if any(n.get("properties", {}).get("name") == "Global Admin" and n.get("properties", {}).get("objectid") == u for n in NODES)), None)
+    # Node schema is mid-migration: tenant nodes use node_operation() (properties.*)
+    # while role and user nodes still write flat top-level keys. Handle both.
+    def _name(n): return n.get("name") or n.get("properties", {}).get("name")
+    def _objid(n): return n.get("id") or n.get("objectid") or n.get("properties", {}).get("objectid")
+
+    global_admin_role = next(
+        (r for r in roles if any(_name(n) == "Global Administrator" and _objid(n) == r for n in NODES)),
+        None,
+    )
+    global_admin_user = next(
+        (u for u in users if any(_name(n) == "Global Admin" and _objid(n) == u for n in NODES)),
+        None,
+    )
     # Assign roles to users (excluding the default Global Admin user)
     for user_id in [u for u in users if u != global_admin_user]:
         if random.random() * 100 < assign_chance_users:

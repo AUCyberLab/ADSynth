@@ -14,9 +14,18 @@ def az_create_default_users(tenant_name, tenant_id, roles, params):
         {"name": "Guest User", "upn": f"guest@{tenant_name.lower()}", "is_admin": False}
     ]
     users = []
-    
+
+    # Node schema is mid-migration: tenant nodes were moved to node_operation()
+    # which stores name/id under "properties.*", while role and user nodes are
+    # still written with flat top-level keys. These accessors handle both.
+    def _name(n): return n.get("name") or n.get("properties", {}).get("name")
+    def _objid(n): return n.get("id") or n.get("objectid") or n.get("properties", {}).get("objectid")
+
     # Find Global Administrator role ID
-    global_admin_role = next((r for r in roles if any(n["name"] == "Global Administrator" and n["id"] == r for n in NODES)), None)
+    global_admin_role = next(
+        (r for r in roles if any(_name(n) == "Global Administrator" and _objid(n) == r for n in NODES)),
+        None,
+    )
     
     for user in default_users:
         user_id = str(uuid.uuid4()).upper()
