@@ -1,10 +1,22 @@
+# Python
 __pycache__/
 *.pyc
-generated_datasets/
-generated_datasets/
-*.json
-generated_datasets/datasets/untitled folder/*.json
-adsynth/.env
-.env
+*.pyo
+*.pyd
+*.egg-info/
+.Python
+
+# Virtual envs / secrets
 .env
 *.env
+.venv/
+venv/
+
+# OS / editor noise
+.DS_Store
+*.Rhistory
+.idea/
+.vscode/
+
+# Generated output
+generated_datasets/
