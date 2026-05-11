@@ -2,7 +2,7 @@
 ADSynth models Active Directory attack graphs based on set-to-set mapping, an intrinsic nature of AD systems. The tool generates the structure of AD graphs and security permissions following
 design guidelines and security principles from Microsoft and prestigious organizations. In addition, ADSynth integrates common misconfigurations in AD administration, a cause for a myriad of AD attacks. Using our tool, users can generate realistic attack graphs for AD systems at various levels of security, ranging from vulnerable systems to extremely secure ones.
 
-Please head to our <a href="https://adsynthesizer.github.io/">website</a> for more details.
+Please head to our <a href="https://aucyberlab.github.io/adsynthesizer/">website</a> for more details.
 
 ## REQUIREMENTS
 * Python 3
