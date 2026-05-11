@@ -2,7 +2,7 @@
 
 ADSynth generates synthetic Active Directory attack graphs based on set-to-set mapping, an intrinsic property of AD systems. It models the structure of AD graphs, security permissions, and common administration misconfigurations following design guidelines from Microsoft and other organizations, producing realistic graphs at security levels ranging from vulnerable to extremely secure.
 
-ADSynth can generate classic on-premises AD, **hybrid identity environments** that include on-prem AD federated with Microsoft Entra ID (Azure AD). ADSynth also generates AD with non-human identities, AI agent identities, schema-validated invariants, and end-to-end reproducibility tooling.
+ADSynth can generate classic on-premises AD, **hybrid identity environments** that include on-prem AD federated with Microsoft Entra ID (Azure AD). ADSynth can also generate ADs with non-human identities, AI agent identities, schema-validated invariants, and end-to-end reproducibility tooling.
 
 See our [project website](https://aucyberlab.github.io/adsynthesizer/) for details and the underlying paper.
 
