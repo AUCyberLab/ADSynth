@@ -32,7 +32,8 @@ from timeit import default_timer as timer
 from typing import Any, Dict, List, Optional
 
 # ── Seeds (n=5 as per paper) ────────────────────────────────────────────────
-SEEDS = [42, 137, 2025, 9001, 31337]
+SEEDS = [1, 2, 6, 27, 28]
+
 
 # ── Output directory ────────────────────────────────────────────────────────
 OUTPUT_DIR = "generated_datasets/baselines"
@@ -243,6 +244,14 @@ def _run_baseline(
     # ── Phase 2: tenants ─────────────────────────────────────────────────────
     tenants = _create_tenants(adsynth_instance, seed_val)
 
+    # ── Phase 2b: Create Azure roles per tenant ───────────────────────
+    # Without this, AZRole nodes never exist, so seam_metrics finds
+    # zero targets and S3/P2(SyncIdentity) collapse to 0. This matches
+    # what do_generate_hybrid_v2 does in its Phase 2b.
+    from adsynth.azure_ad_system.az_default_roles import az_create_roles
+    for t in tenants:
+        az_create_roles(t["id"], adsynth_instance.parameters)
+
     # ── Phase 3: sync links ──────────────────────────────────────────────────
     if flags["collapsed_sync"]:
         links = _create_sync_links_collapsed(
@@ -295,53 +304,7 @@ def _run_baseline(
         )
         
     # ── Phase 6.5: FIX FOR METRICS (Inject Cloud Roles & AD Inbound Links) ───
-    if flags["enable_nhi"]:
-        rng_roles = random.Random(seed_val ^ 0xABCD)
-        
-        # 1. Force inject AZRole (seam_metrics explicitly looks for AZRole)
-        role_id = f"az-role-global-admin-{seed}"
-        NODES.append({
-            "id": role_id,
-            "labels": ["Base", "Principal", "AZRole"],
-            "properties": {"name": "Global Administrator", "plane": "Entra"}
-        })
-        
-        # 2. Check if ADSynth completely failed to create a SyncIdentity, and inject one if missing
-        nhis = [n for n in NODES if any(lbl in n.get("labels", []) for lbl in ["SyncIdentity", "ServicePrincipal", "AutomationAccount", "ManagedIdentity"])]
-        if not any("SyncIdentity" in n.get("labels", []) for n in nhis):
-            sync_id = f"sync-identity-{seed}"
-            new_sync = {
-                "id": sync_id,
-                "labels": ["Base", "Principal", "NonHumanIdentity", "SyncIdentity"],
-                "properties": {"name": "AD Connect Sync", "plane": "Hybrid"}
-            }
-            NODES.append(new_sync)
-            nhis.append(new_sync)
-
-        # 3. Give NHIs the AZRole so the path has a cloud destination
-        for nhi in nhis:
-            if "SyncIdentity" in nhi.get("labels", []) or rng_roles.random() < 0.25:
-                EDGES.append({
-                    "start": {"id": nhi["id"]},
-                    "end": {"id": role_id},
-                    "relType": "HAS_AZ_ROLE",
-                    "properties": {"injected_by": "baseline_patch"}
-                })
-                
-        # 4. Bridge the Gap! Force AD users/groups to have rights over the NHI so paths can cross
-        ad_principals = [n for n in NODES if any(lbl in n.get("labels", []) for lbl in ["User", "Group"])]
-        if ad_principals:
-            for nhi in nhis:
-                # Pick 3 random AD principals to act as the "compromised" entry point
-                attackers = rng_roles.choices(ad_principals, k=3)
-                for attacker in attackers:
-                    EDGES.append({
-                        "start": {"id": attacker["id"]},
-                        "end": {"id": nhi["id"]},
-                        "relType": "GenericAll",
-                        "properties": {"injected_by": "baseline_patch_bridge"}
-                    })
-
+    
     # ── Metrics ──────────────────────────────────────────────────────────────
     metrics = compute_seam_metrics(domains, tenants)
     metrics["baseline"] = baseline["id"]
@@ -534,18 +497,11 @@ def run_week9_baselines():
         successful_runs = 0
         attempts = 0
         
-        while successful_runs < 5 and attempts < 30:
-            # Pick a seed. If we fail, we add an offset to try a new random state 
-            # to bypass the ADSynth native generation crash.
-            base_seed = SEEDS[successful_runs]
-            actual_seed = base_seed + (attempts * 1000) 
-            
-            attempts += 1
-            print(f"\n  [Run {successful_runs + 1}/5] {baseline['id']} seed={actual_seed}")
+        for seed in SEEDS:
+            print(f"\n  [Run] {baseline['id']} seed={seed}")
             t0 = timer()
-
             try:
-                metrics = _run_baseline(adsynth, baseline, actual_seed)
+                metrics = _run_baseline(adsynth, baseline, seed)
                 key     = _extract_key_metrics(metrics)
                 all_runs.append(metrics)
                 per_baseline[baseline["id"]].append(key)
@@ -556,12 +512,11 @@ def run_week9_baselines():
                       f"  P3={key['p3_misconfig_density']:.3f}"
                       f"  inv={'✓' if key['invariant_all_pass'] else '✗'}"
                       f"  ({timer()-t0:.1f}s)")
-                
-                successful_runs += 1
 
             except Exception as e:
-                print(f"    [!] ADSynth internal crash on seed {actual_seed}. Retrying with a new seed offset to bypass...")
-
+                print(f"    [!] Run failed on seed {seed}: {e}")
+                # Don't retry — log and move on. The failure is real
+                # and counts as missing data in the paper's reporting.
     # ── Aggregate ────────────────────────────────────────────────────────────
     summary: Dict[str, Any] = {}
     for b in BASELINES:

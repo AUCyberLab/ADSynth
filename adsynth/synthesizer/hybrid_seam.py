@@ -166,6 +166,21 @@ def _create_connector_host(
     if domain_idx != -1:
         edge_operation(domain_idx, idx, "Contains", ["isacl"], [False])
 
+    # Realism patch: privileged on-prem groups have AdminTo on the
+    # ConnectorHost server, matching default AD admin rights on any
+    # domain-joined server. This is what enables an attacker who has
+    # compromised an on-prem admin principal to reach the ConnectorHost
+    # in the directed attack graph.
+    for admin_group in ("DOMAIN ADMINS", "ADMINISTRATORS", "ENTERPRISE ADMINS"):
+        gname = f"{admin_group}@{domain['name']}_Group"
+        admin_idx = get_node_index(gname, "name")
+        if admin_idx != -1:
+            edge_operation(
+                admin_idx, idx, "AdminTo",
+                ["isacl", "isInherited"],
+                [False, False]
+            )
+ 
     return idx
 
 
@@ -240,6 +255,22 @@ def _create_sync_identity(
     if connector_idx != -1:
         edge_operation(idx, connector_idx, "RUNS_ON", ["isacl"], [False])
 
+    # Semantics: compromise of the ConnectorHost yields the sync
+    # service account's credentials, which in our schema is the
+    # SyncIdentity. This is the inbound edge that makes the
+    # SyncIdentity reachable in directed attack-graph BFS and lets
+    # the paper's "participates in attack-path computations" claim
+    # hold at the metric level.
+    #
+    # Direction matches BloodHound's HasSession convention:
+    # asset -> principal means "compromise of asset yields principal".
+    if connector_idx != -1:
+        edge_operation(
+            connector_idx, idx, "HOSTS_PRINCIPAL",
+            ["isacl", "viaHostCompromise"],
+            [False, True]
+        )
+
     return idx
 
 
@@ -293,6 +324,27 @@ def _create_pta_server(
     if domain_idx != -1:
         edge_operation(domain_idx, idx, "Contains", ["isacl"], [False])
 
+    # ── Realism patch: admin groups have AdminTo on PTA agent host
+    for admin_group in ("DOMAIN ADMINS", "ADMINISTRATORS", "ENTERPRISE ADMINS"):
+        gname = f"{admin_group}@{domain['name']}_Group"
+        admin_idx = get_node_index(gname, "name")
+        if admin_idx != -1:
+            edge_operation(
+                admin_idx, idx, "AdminTo",
+                ["isacl", "isInherited"],
+                [False, False]
+            )
+ 
+    # ── Realism patch: PTA agent host hosts the sync principal for
+    # this link (same semantics as ConnectorHost case).
+    sync_idx = SYNC_IDENTITY_NODES.get((domain["name"], tenant_id))
+    if sync_idx is not None:
+        edge_operation(
+            idx, sync_idx, "HOSTS_PRINCIPAL",
+            ["isacl", "viaHostCompromise"],
+            [False, True]
+        )
+ 
     return idx
 
 
@@ -347,6 +399,26 @@ def _create_adfs_server(
     if domain_idx != -1:
         edge_operation(domain_idx, idx, "Contains", ["isacl"], [False])
 
+    # ── Realism patch: admin groups have AdminTo on ADFS server
+    for admin_group in ("DOMAIN ADMINS", "ADMINISTRATORS", "ENTERPRISE ADMINS"):
+        gname = f"{admin_group}@{domain['name']}_Group"
+        admin_idx = get_node_index(gname, "name")
+        if admin_idx != -1:
+            edge_operation(
+                admin_idx, idx, "AdminTo",
+                ["isacl", "isInherited"],
+                [False, False]
+            )
+ 
+    # ── Realism patch: ADFS server hosts the sync principal for this link
+    sync_idx = SYNC_IDENTITY_NODES.get((domain["name"], tenant_id))
+    if sync_idx is not None:
+        edge_operation(
+            idx, sync_idx, "HOSTS_PRINCIPAL",
+            ["isacl", "viaHostCompromise"],
+            [False, True]
+        )
+ 
     return idx
 
 
