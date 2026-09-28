@@ -1,0 +1,58 @@
+cff-version: 1.2.0
+message: >-
+  If you use ADSynth in your work, please cite the DSN 2024 paper listed under
+  preferred-citation. Citing this software release as well is welcome.
+type: software
+title: "ADSynth: A Tool to Synthesize Realistic Active Directory Attack Graphs"
+version: 2.0.0
+date-released: 2026-09-29
+license: BSD-3-Clause
+repository-code: "https://github.com/AUCyberLab/ADSynth"
+url: "https://aucyberlab.github.io/adsynthesizer/"
+abstract: >-
+  ADSynth generates synthetic Active Directory attack graphs based on
+  set-to-set mapping, an intrinsic property of AD systems. It models the
+  structure of AD graphs, security permissions and common administration
+  misconfigurations following published design guidelines, at security levels
+  ranging from vulnerable to extremely secure. It also generates Microsoft
+  Entra ID and hybrid identity environments, non-human identities including AI
+  agents, and exports to Neo4j JSONL and BloodHound Community Edition OpenGraph.
+keywords:
+  - active-directory
+  - attack-graph
+  - bloodhound
+  - neo4j
+  - entra-id
+  - synthetic-data
+  - security
+authors:
+  - family-names: Nguyen
+    given-names: Nhu Long
+    affiliation: The University of Adelaide
+  - family-names: Parmar
+    given-names: Raj
+  - family-names: Falkner
+    given-names: Nickolas
+    affiliation: The University of Adelaide
+  - family-names: Nguyen
+    given-names: Hung X.
+    affiliation: The University of Adelaide
+preferred-citation:
+  type: conference-paper
+  title: "ADSynth: Synthesizing Realistic Active Directory Attack Graphs"
+  authors:
+    - family-names: Nguyen
+      given-names: Nhu Long
+    - family-names: Falkner
+      given-names: Nickolas
+    - family-names: Nguyen
+      given-names: Hung X.
+  collection-title: "2024 54th Annual IEEE/IFIP International Conference on Dependable Systems and Networks (DSN)"
+  conference:
+    name: "DSN 2024"
+  publisher:
+    name: IEEE
+  year: 2024
+  start: 66
+  end: 74
+  doi: 10.1109/DSN58291.2024.00021

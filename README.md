@@ -1,5 +1,9 @@
 # ADSynth: A Tool to Synthesize Realistic Active Directory Attack Graphs
 
+[![Release](https://img.shields.io/github/v/release/AUCyberLab/ADSynth?label=release)](https://github.com/AUCyberLab/ADSynth/releases)
+[![License: BSD-3-Clause](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](LICENSE)
+[![Paper](https://img.shields.io/badge/paper-DSN%202024-orange)](https://doi.org/10.1109/DSN58291.2024.00021)
+
 ADSynth generates synthetic Active Directory attack graphs based on set-to-set mapping, an intrinsic property of AD systems. It models the structure of AD graphs, security permissions, and common administration misconfigurations following design guidelines from Microsoft and other organizations, producing realistic graphs at security levels ranging from vulnerable to extremely secure.
 
 ADSynth can generate classic on-premises AD, **hybrid identity environments** that include on-prem AD federated with Microsoft Entra ID (Azure AD). ADSynth can also generate ADs with non-human identities, AI agent identities, schema-validated invariants, and end-to-end reproducibility tooling.
@@ -16,6 +20,20 @@ See our [project website](https://aucyberlab.github.io/adsynthesizer/) for detai
 - **Reproducibility bundles** — config snapshot, 8-component seed vector, graph statistics, and SHA-256 manifest per run.
 - **AI-driven parameter generation** — describe an organisation in natural language and have Azure OpenAI synthesise a full parameter set.
 - **Multiple output formats** — Neo4j JSONL (importable via APOC) and BloodHound Community Edition OpenGraph zip.
+
+## Used by
+
+ADSynth graphs are the evaluation testbed in the following published work:
+
+- N. L. Nguyen, N. Falkner and H. X. Nguyen. *Scalable Active Directory Defense with α-Metagraph*. RAID 2025. [doi:10.1109/RAID67961.2025.00073](https://doi.org/10.1109/RAID67961.2025.00073)
+- Y. Zhang, M. Ward and H. X. Nguyen. *Rethinking Attack Path Management: A New Metric for Choke Points in Attack Graphs*. IEEE CSF 2025. [doi:10.1109/CSF64896.2025.00018](https://doi.org/10.1109/CSF64896.2025.00018)
+- Q. H. Ngo, M. Guo and H. X. Nguyen. *Adaptive Wizard for Removing Cross-Tier Misconfigurations in Active Directory*. 2025. [arXiv:2505.01028](https://doi.org/10.48550/arXiv.2505.01028)
+
+Downstream code built on ADSynth:
+
+- [ADSynthMisconfig](https://github.com/YagzanManjunaath-TamilselviKalidasan/ADSynthMisconfig): misconfiguration percolation and mitigation experiments on ADSynth graphs.
+
+Using ADSynth in a paper, tool or course? Open an issue or a pull request and we will list it here.
 
 ## Requirements
 
@@ -100,7 +118,7 @@ All commands of the `python -m adsynth` prompt:
 | `neo4jconfig` | Configure Neo4j connection (URL, user, password, encryption). |
 | `connect` | Test the configured connection. |
 | `cleardb` | Wipe all nodes/edges from Neo4j in 10 000-row batches and reset schema constraints. |
-| `importdb` | Import a generated JSON file into Neo4j via APOC. Requires APOC installed — see `docs/Neo4J_guides.pdf`. |
+| `importdb` | Import a generated JSON file into a plain Neo4j instance via APOC. The APOC plugin jar must be installed in Neo4j, not only configured in `apoc.conf` (see `docs/Neo4J_guides.pdf`). This route targets Neo4j and legacy BloodHound. For BloodHound CE use the OpenGraph zip instead (see [Output formats](#output-formats)). |
 
 ### Misc
 
@@ -168,6 +186,8 @@ One JSON object per line — a node or a relationship — matching the [Neo4j AP
 
 Import into Neo4j with APOC (see `docs/Neo4J_guides.pdf`) and visualise in [BloodHound](https://bloodhound.readthedocs.io/en/latest/).
 
+> **Using the Neo4j container from the BloodHound CE docker-compose?** It ships without APOC. Copy the `apoc-*-core.jar` matching your Neo4j version into the container's `plugins` folder (or set `NEO4J_PLUGINS=["apoc"]` on the service) before running `importdb`. Also note that BloodHound CE does not pick up data written straight into Neo4j, because CE expects data to arrive through its own ingest pipeline. For CE, use the OpenGraph zip below.
+
 ### BloodHound CE OpenGraph zip
 
 `run.py` automatically emits a BloodHound CE-compatible zip alongside the JSONL. To re-export an existing `graph.jsonl`:
@@ -211,6 +231,26 @@ params_list.xlsx          Parameter documentation
 docs/Neo4J_guides.pdf     Neo4j + APOC installation guide
 tests/                    Test suites (test_week2.py, test_week3.py)
 ```
+
+## Citing ADSynth
+
+If you use ADSynth, please cite the DSN 2024 paper. A `CITATION.cff` is included, so the **Cite this repository** button on GitHub gives the same reference.
+
+```bibtex
+@inproceedings{nguyen2024adsynth,
+  title     = {{ADSynth}: Synthesizing Realistic Active Directory Attack Graphs},
+  author    = {Nguyen, Nhu Long and Falkner, Nickolas and Nguyen, Hung X.},
+  booktitle = {2024 54th Annual IEEE/IFIP International Conference on Dependable Systems and Networks (DSN)},
+  pages     = {66--74},
+  year      = {2024},
+  publisher = {IEEE},
+  doi       = {10.1109/DSN58291.2024.00021}
+}
+```
+
+## Support
+
+Questions and bug reports go in [GitHub issues](https://github.com/AUCyberLab/ADSynth/issues). A maintainer replies within two weeks. A scheduled check (`.github/workflows/issue-response.yml`) flags any issue that has waited a week without a maintainer response, so nothing is left unanswered.
 
 ## Acknowledgements
 
