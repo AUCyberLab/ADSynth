@@ -1,0 +1,60 @@
+name: Issue response check
+
+# Keeps the two-week response rule. Every Monday morning (Adelaide time) this
+# looks at every open issue whose latest activity came from a non-maintainer.
+# Anything that has waited 7 days or more is labelled "needs-response" and
+# assigned to the maintainer, which sends a notification while a week of the
+# 14-day commitment still remains. The label is removed once a maintainer has
+# replied. It never posts comments.
+
+on:
+  schedule:
+    - cron: "30 21 * * 0"
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const MAINTAINER = new Set(['OWNER', 'MEMBER', 'COLLABORATOR']);
+            const ASSIGNEE = 'hxnguyen';
+            const LABEL = 'needs-response';
+            const WARN_DAYS = 7;
+            const { owner, repo } = context.repo;
+            const now = Date.now();
+
+            const issues = await github.paginate(github.rest.issues.listForRepo, {
+              owner, repo, state: 'open', per_page: 100,
+            });
+
+            for (const issue of issues) {
+              if (issue.pull_request) continue;
+              const comments = await github.paginate(github.rest.issues.listComments, {
+                owner, repo, issue_number: issue.number, per_page: 100,
+              });
+              const events = [{ by: issue.author_association, at: issue.created_at }]
+                .concat(comments.map(c => ({ by: c.author_association, at: c.created_at })));
+              const last = events[events.length - 1];
+              const waitedDays = Math.floor((now - Date.parse(last.at)) / 86400000);
+              const labels = issue.labels.map(l => (typeof l === 'string' ? l : l.name));
+              const flagged = labels.includes(LABEL);
+
+              if (!MAINTAINER.has(last.by) && waitedDays >= WARN_DAYS) {
+                if (!flagged) {
+                  await github.rest.issues.addLabels({ owner, repo, issue_number: issue.number, labels: [LABEL] });
+                }
+                if (!issue.assignees.some(a => a.login === ASSIGNEE)) {
+                  await github.rest.issues.addAssignees({ owner, repo, issue_number: issue.number, assignees: [ASSIGNEE] });
+                }
+                core.warning(`#${issue.number} "${issue.title}" has waited ${waitedDays} days for a maintainer reply`);
+              } else if (flagged && MAINTAINER.has(last.by)) {
+                await github.rest.issues.removeLabel({ owner, repo, issue_number: issue.number, name: LABEL })
+                  .catch(() => {});
+              }
+            }
