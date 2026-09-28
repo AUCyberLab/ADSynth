@@ -250,7 +250,7 @@ If you use ADSynth, please cite the DSN 2024 paper. A `CITATION.cff` is included
 
 ## Support
 
-Questions and bug reports go in [GitHub issues](https://github.com/AUCyberLab/ADSynth/issues). A maintainer replies within two weeks. A scheduled check (`.github/workflows/issue-response.yml`) flags any issue that has waited a week without a maintainer response, so nothing is left unanswered.
+Please check and submit  questions and bug reports go in [GitHub issues](https://github.com/AUCyberLab/ADSynth/issues). We will try to reply within two weeks. 
 
 ## Acknowledgements
 
